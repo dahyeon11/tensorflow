@@ -518,13 +518,20 @@ ANeuralNetworksOperandType ConvertTensorTypeToNNType(
     tensor_rank = scalar_rank;
     tensor_dims = &scalar_rank;
   }
-  ANeuralNetworksOperandType nn_operand_type{
-      .type = nn_type,
-      .dimensionCount = tensor_rank,
-      .dimensions = tensor_dims,
-      .scale = scale,
-      .zeroPoint = zero_point,
-  };
+  // ANeuralNetworksOperandType nn_operand_type{
+  //     .type = nn_type,
+  //     .dimensionCount = tensor_rank,
+  //     .dimensions = tensor_dims,
+  //     .scale = scale,
+  //     .zeroPoint = zero_point,
+  // };
+  ANeuralNetworksOperandType nn_operand_type;
+  nn_operand_type.type = nn_type;
+  nn_operand_type.dimensionCount = tensor_rank;
+  nn_operand_type.dimensions = tensor_dims;
+  nn_operand_type.scale = scale;
+  nn_operand_type.zeroPoint = zero_point;
+
   return nn_operand_type;
 }
 
@@ -1526,7 +1533,9 @@ class NNAPIOpBuilder {
     const TfLiteTensor* tensor = &context_->tensors[tensor_index];
     TF_LITE_ENSURE_EQ(context_, NumElements(tensor), 1);
 
-    ANeuralNetworksOperandType operand_type{.type = nn_type};
+    // ANeuralNetworksOperandType operand_type{.type = nn_type};
+    ANeuralNetworksOperandType operand_type;
+    operand_type.type = nn_type;
     RETURN_TFLITE_ERROR_IF_NN_ERROR_FOR_TENSOR(
         context_,
         nnapi_->ANeuralNetworksModel_addOperand(nn_model_, &operand_type),
@@ -1679,7 +1688,9 @@ class NNAPIOpBuilder {
 
   template <typename T>
   TfLiteStatus AddScalarOperand(T value, int32_t nn_type) {
-    ANeuralNetworksOperandType operand_type{.type = nn_type};
+    //ANeuralNetworksOperandType operand_type{.type = nn_type};
+    ANeuralNetworksOperandType operand_type;
+    operand_type.type = nn_type;
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context_,
         nnapi_->ANeuralNetworksModel_addOperand(nn_model_, &operand_type),
@@ -1698,11 +1709,18 @@ class NNAPIOpBuilder {
   TfLiteStatus AddVectorOperand(const T* values, uint32_t num_values,
                                 int32_t nn_type, float scale,
                                 int32_t zero_point) {
-    ANeuralNetworksOperandType operand_type{.type = nn_type,
-                                            .dimensionCount = 1,
-                                            .dimensions = &num_values,
-                                            .scale = scale,
-                                            .zeroPoint = zero_point};
+    // ANeuralNetworksOperandType operand_type{.type = nn_type,
+    //                                         .dimensionCount = 1,
+    //                                         .dimensions = &num_values,
+    //                                         .scale = scale,
+    //                                         .zeroPoint = zero_point};
+    ANeuralNetworksOperandType operand_type;
+    operand_type.type = nn_type;
+    operand_type.dimensionCount = 1;
+    operand_type.dimensions = &num_values;
+    operand_type.scale = scale;
+    operand_type.zeroPoint = zero_point;
+
 
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context_,
@@ -1739,13 +1757,20 @@ class NNAPIOpBuilder {
                                          int32_t nn_type, float scale,
                                          int32_t zero_point,
                                          int* ann_index_out) {
-    ANeuralNetworksOperandType operand_type{
-        .type = nn_type,
-        .dimensionCount = dimension_count,
-        .dimensions = dimension_data,
-        .scale = scale,
-        .zeroPoint = zero_point,
-    };
+    // ANeuralNetworksOperandType operand_type{
+    //     .type = nn_type,
+    //     .dimensionCount = dimension_count,
+    //     .dimensions = dimension_data,
+    //     .scale = scale,
+    //     .zeroPoint = zero_point,
+    // };
+    ANeuralNetworksOperandType operand_type;
+    operand_type.type = nn_type;
+    operand_type.dimensionCount = dimension_count;
+    operand_type.dimensions = dimension_data;
+    operand_type.scale = scale;
+    operand_type.zeroPoint = zero_point;
+
     RETURN_TFLITE_ERROR_IF_NN_ERROR(
         context_,
         nnapi_->ANeuralNetworksModel_addOperand(nn_model_, &operand_type),
