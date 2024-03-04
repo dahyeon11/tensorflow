@@ -1865,13 +1865,20 @@ class NNAPIOpBuilder {
                   tensor->quantization.params);
           if (quantization_params->scale->size > 1 || force_per_channel) {
             // Set up per-channel quantization.
-            ann_perchannel_params = {
-                .channelDim = static_cast<uint32_t>(
-                    quantization_params->quantized_dimension),
-                .scaleCount =
-                    static_cast<uint32_t>(quantization_params->scale->size),
-                .scales = quantization_params->scale->data,
-            };
+            // ann_perchannel_params = {
+            //     .channelDim = static_cast<uint32_t>(
+            //         quantization_params->quantized_dimension),
+            //     .scaleCount =
+            //         static_cast<uint32_t>(quantization_params->scale->size),
+            //     .scales = quantization_params->scale->data,
+            // };
+            ANeuralNetworksSymmPerChannelQuantParams ann_perchannel_params;
+            ann_perchannel_params.channelDim = static_cast<uint32_t>(
+                quantization_params->quantized_dimension);
+            ann_perchannel_params.scaleCount = static_cast<uint32_t>(
+                quantization_params->scale->size);
+            ann_perchannel_params.scales = quantization_params->scale->data;
+
             nn_type = ANEURALNETWORKS_TENSOR_QUANT8_SYMM_PER_CHANNEL;
             scale = 0.0f;
             zeroPoint = 0;
@@ -6936,9 +6943,54 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
 
   // NN API Delegate Registration (the pseudo kernel that will invoke NN
   // API node sub sets)
+  // static const TfLiteRegistration nnapi_delegate_kernel = {
+  //     .init = [](TfLiteContext* context, const char* buffer,
+  //                size_t length) -> void* {
+  //       const TfLiteDelegateParams* params =
+  //           reinterpret_cast<const TfLiteDelegateParams*>(buffer);
+
+  //       auto* delegate_data = static_cast<Data*>(params->delegate->data_);
+  //       int* nnapi_errno = &(delegate_data->nnapi_errno);
+
+  //       NNAPIDelegateKernel* kernel_state =
+  //           delegate_data->MaybeGetCachedDelegateKernel(params);
+  //       if (!kernel_state) {
+  //         kernel_state = new NNAPIDelegateKernel(delegate_data->nnapi,
+  //                                                delegate_data->vendor_plugin);
+  //         kernel_state->Init(context, params, nnapi_errno);
+  //       }
+
+  //       return kernel_state;
+  //     },
+
+  //     .free = [](TfLiteContext* context, void* buffer) -> void {
+  //       delete reinterpret_cast<NNAPIDelegateKernel*>(buffer);
+  //     },
+
+  //     .prepare = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+  //       NNAPIDelegateKernel* state =
+  //           reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
+  //       int* nnapi_errno =
+  //           &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
+  //       return state->Prepare(context, node, nnapi_errno);
+  //     },
+
+  //     .invoke = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+  //       NNAPIDelegateKernel* state =
+  //           reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
+  //       int* nnapi_errno =
+  //           &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
+  //       return state->Invoke(context, node, nnapi_errno);
+  //     },
+
+  //     .profiling_string = nullptr,
+  //     .builtin_code = kTfLiteBuiltinDelegate,
+  //     .custom_name = "TfLiteNnapiDelegate",
+  //     .version = 1,
+  // };
   static const TfLiteRegistration nnapi_delegate_kernel = {
-      .init = [](TfLiteContext* context, const char* buffer,
-                 size_t length) -> void* {
+    // init function
+    [](TfLiteContext* context, const char* buffer, size_t length) -> void* {
         const TfLiteDelegateParams* params =
             reinterpret_cast<const TfLiteDelegateParams*>(buffer);
 
@@ -6948,39 +7000,39 @@ TfLiteStatus StatefulNnApiDelegate::DoPrepare(TfLiteContext* context,
         NNAPIDelegateKernel* kernel_state =
             delegate_data->MaybeGetCachedDelegateKernel(params);
         if (!kernel_state) {
-          kernel_state = new NNAPIDelegateKernel(delegate_data->nnapi,
-                                                 delegate_data->vendor_plugin);
-          kernel_state->Init(context, params, nnapi_errno);
+            kernel_state = new NNAPIDelegateKernel(delegate_data->nnapi,
+                                                   delegate_data->vendor_plugin);
+            kernel_state->Init(context, params, nnapi_errno);
         }
 
         return kernel_state;
-      },
-
-      .free = [](TfLiteContext* context, void* buffer) -> void {
+    },
+    // free function
+    [](TfLiteContext* context, void* buffer) -> void {
         delete reinterpret_cast<NNAPIDelegateKernel*>(buffer);
-      },
-
-      .prepare = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+    },
+    // prepare function
+    [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
         NNAPIDelegateKernel* state =
             reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
         int* nnapi_errno =
             &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
         return state->Prepare(context, node, nnapi_errno);
-      },
-
-      .invoke = [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
+    },
+    // invoke function
+    [](TfLiteContext* context, TfLiteNode* node) -> TfLiteStatus {
         NNAPIDelegateKernel* state =
             reinterpret_cast<NNAPIDelegateKernel*>(node->user_data);
         int* nnapi_errno =
             &(static_cast<Data*>(node->delegate->data_)->nnapi_errno);
         return state->Invoke(context, node, nnapi_errno);
-      },
-
-      .profiling_string = nullptr,
-      .builtin_code = kTfLiteBuiltinDelegate,
-      .custom_name = "TfLiteNnapiDelegate",
-      .version = 1,
+    },
+    nullptr, // profiling_string
+    kTfLiteBuiltinDelegate, // builtin_code
+    "TfLiteNnapiDelegate", // custom_name
+    1, // version
   };
+
 
   // Initialize caching, if applicable, from Options.
   const char* cache_dir = delegate_options.cache_dir;
